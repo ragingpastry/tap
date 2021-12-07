@@ -1,0 +1,49 @@
+---
+.robot_tpl_linux: &robot_tpl_linux
+  stage: functionaltest
+  image: python:3.8
+  artifacts:
+    paths:
+      - artifacts/*.xml
+  only:
+    - merge_requests
+    - master
+  before_script:
+    - git submodule sync --recursive
+    - git -c http.sslVerify=false submodule update --init --remote --recursive
+    - git submodule foreach git checkout master
+    - pip install robotframework
+    - mkdir -p artifacts
+
+robot-tests-expected-linux:
+  extends: .robot_tpl_linux
+  script:
+    - python3 -m robot --output artifacts/output-${CI_JOB_ID}.xml  functional/expected/${ROBOT_TEST}.robot
+  variables:
+    BIN: "${CI_PROJECT_DIR}/${LINUX_AMD64_BINARY}"
+  parallel:
+    matrix:
+      - ROBOT_TEST:
+          - RR13-1
+
+robot-tests-unexpected-linux:
+  extends: .robot_tpl_linux
+  script:
+    - python3 -m robot --output artifacts/output-${CI_JOB_ID}.xml  functional/unexpected/${ROBOT_TEST}.robot
+  variables:
+    BIN: "${CI_PROJECT_DIR}/${LINUX_AMD64_BINARY}"
+  parallel:
+    matrix:
+      - ROBOT_TEST:
+          - RR13-20
+
+create-final-report:
+  extends: .robot_tpl_linux
+  stage: combinetests
+  artifacts:
+    paths:
+      - artifacts/*.html
+      - artifacts/*.xml
+  script:
+    - cd artifacts
+    - python3 -m robot.rebot -r finalreport.html *.xml
