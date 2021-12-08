@@ -1,0 +1,5 @@
+[submodule "fixture/test-tap-repo"]
+	path = fixture/test-tap-repo
+	update = merge
+	branch = master
+	url = ../test-tap-repo.git

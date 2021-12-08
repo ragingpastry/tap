@@ -7,11 +7,14 @@ variables:
 include:
   - remote: https://gitlab.com/dreamer-labs/repoman/gitlab-ci-templates/-/raw/master/.gitlab-ci-commitchecker.yml
   - remote: https://gitlab.com/dreamer-labs/repoman/gitlab-ci-templates/-/raw/master/.gitlab-ci-generate-release.yml
+  - .gitlab-ci-functional-test.yml
   - .gitlab-ci-release.yml
 
 stages:
   - lint
   - build
+  - functionaltest
+  - combinetests
   - generate_release
   - upload
   - prep_release
@@ -20,6 +23,9 @@ stages:
 nimlint:
   image: ubuntu:20.04
   stage: lint
+  only:
+    - merge_requests
+    - master
   before_script:
     - apt update && apt install -y gcc xz-utils curl
     - (curl https://nim-lang.org/choosenim/init.sh -sSf > /tmp/init.sh; sh /tmp/init.sh -y; rm /tmp/init.sh)
@@ -35,6 +41,9 @@ nimlint:
 nimbuild-linux:
   image: nimlang/nim:latest
   stage: build
+  only:
+    - merge_requests
+    - master
   script: |
     apt update && apt install -y musl-tools curl make
     nimble muslbuild

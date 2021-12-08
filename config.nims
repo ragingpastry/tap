@@ -24,7 +24,7 @@ let
   pcreLibDir = pcreInstallDir / "lib"
   pcreLibFile = pcreLibDir / "libpcre.a"
   # libressl
-  libreSslVersion = getEnv("LIBRESSLVER", "2.8.1")
+  libreSslVersion = getEnv("LIBRESSLVER", "3.4.2")
   libreSslSourceDir = "libressl-" & libreSslVersion
   libreSslArchiveFile = libreSslSourceDir & ".tar.gz"
   libreSslDownloadLink = "https://ftp.openbsd.org/pub/OpenBSD/LibreSSL/" & libreSslArchiveFile
