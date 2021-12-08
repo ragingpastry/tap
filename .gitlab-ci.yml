@@ -41,9 +41,13 @@ nimlint:
 nimbuild-linux:
   image: nimlang/nim:latest
   stage: build
-  only:
-    - merge_requests
-    - master
+  rules:
+    - if: '$CI_COMMIT_MESSAGE =~ /^chore\(release\)/ && $CI_COMMIT_TAG != null'
+      when: always
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: always
+    - if: '$CI_COMMIT_REF_NAME == "master"'
+      when: always
   script: |
     apt update && apt install -y musl-tools curl make
     nimble muslbuild
