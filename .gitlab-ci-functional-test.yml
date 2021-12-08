@@ -2,6 +2,8 @@
 .robot_tpl_linux: &robot_tpl_linux
   stage: functionaltest
   image: python:3.8
+  variables:
+    GIT_SUBMODULE_STRATEGY: recursive
   artifacts:
     paths:
       - artifacts/*.xml
@@ -9,8 +11,6 @@
     - merge_requests
     - master
   before_script:
-    - git submodule sync --recursive
-    - git -c http.sslVerify=false submodule update --init --remote --recursive
     - git submodule foreach git checkout master
     - pip install robotframework
     - mkdir -p artifacts
