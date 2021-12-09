@@ -219,7 +219,7 @@ task musl, "Builds an optimized static binary using musl":
       (dirName, baseName, _) = splitFile(f)
       binFile = "bin" / baseName  # Save the binary in the same dir as the nim file
       nimArgsArray = when doOptimize:
-                       ["c", "-d:musl", "-o:bin/", "-d:release", "--opt:size", extraSwitches, f]
+                       ["c", "-d:musl", "-o:bin/", "--opt:size", extraSwitches, f]
                      else:
                        ["c", "-d:musl", "-o:bin/", extraSwitches, f]
       nimArgs = nimArgsArray.mapconcat()

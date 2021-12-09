@@ -34,7 +34,7 @@ proc cli*() =
         if e.flag == "argparse_help":
             echo parser.help
             quit(0)
-    except UsageError as e:
+    except UsageError:
         echo parser.help
         stderr.writeLine getCurrentExceptionMsg()
         quit(1)

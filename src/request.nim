@@ -1,13 +1,22 @@
 import std/[osproc, httpclient, strutils, net, strformat, json, uri]
 
 type
-    GitlabClient* = object
+    GitlabClient* = ref object
         ## A container for Gitlab things that we pass between functions
 
         api_endpoint*: string
         api_key*: string
         project_id*: int
         trigger_token*: string
+        client*: HttpClient
+
+proc newGitlabClient*(api_endpoint: string, api_key: string): GitlabClient =
+    ## Initialize the GitlabClient object
+    new result
+    result.api_endpoint = api_endpoint
+    result.api_key = api_key
+    result.client = newHttpClient(sslContext = newContext(verifyMode=CVerifyNone))
+
 
 proc getRemote*(): string =
     ## Returns the origin remote of a git repository
@@ -46,16 +55,15 @@ proc getBranch*(): string =
     stripLineEnd(branch)
     result = branch
 
-proc getProjectID*(project_url: string, gl_client: var GitlabClient) =
+proc getProjectID*(project_url: string, gl_client: GitlabClient) =
     ## Gets a project ID based on a project URL from the
     ## Gitlab API
 
     let encoded_url = encodeUrl(project_url)
-    var client = newHttpClient(sslContext = newContext(
-            verifyMode = CVerifyNone))
-    client.headers = newHttpHeaders({"PRIVATE-TOKEN": gl_client.api_key})
+    #gl_client.client.headers = newHttpHeaders({"PRIVATE-TOKEN": gl_client.api_key})
+    gl_client.client.headers = newHttpHeaders({"PRIVATE-TOKEN": gl_client.api_key})
     try:
-        let response = client.getContent(fmt"{gl_client.api_endpoint}/projects/{encoded_url}")
+        let response = gl_client.client.getContent(fmt"{gl_client.api_endpoint}/projects/{encoded_url}")
         let project_id = parseJSON(response)["id"].getInt()
 
         gl_client.project_id = project_id
@@ -68,14 +76,13 @@ proc getProjectID*(project_url: string, gl_client: var GitlabClient) =
 
 proc setTriggerToken*(gl_client: var GitlabClient) =
     ## Creates a Pipeline Trigger token in the Gitlab project
-    var client = newHttpClient(sslContext = newContext(
-            verifyMode = CVerifyNone))
-    client.headers = newHttpHeaders({"PRIVATE-TOKEN": gl_client.api_key})
+
+    #gl_client.client.headers = newHttpHeaders({"PRIVATE-TOKEN": gl_client.api_key})
     var data = newMultipartData()
     data["description"] = "Token created via tap CLI"
 
     try:
-        let response = client.postContent(
+        let response = gl_client.client.postContent(
                 fmt"{gl_client.api_endpoint}/projects/{gl_client.project_id}/triggers",
                  multipart = data)
         gl_client.trigger_token = parseJSON(response)["token"].getStr()
@@ -90,11 +97,9 @@ proc getTriggerToken*(gl_client: var GitlabClient) =
     ## Attempts to find an existing Pipeline trigger token.
     ## If none exist then we create one.
 
-    var client = newHttpClient(sslContext = newContext(
-            verifyMode = CVerifyNone))
-    client.headers = newHttpHeaders({"PRIVATE-TOKEN": gl_client.api_key})
+    #gl_client.client.headers = newHttpHeaders({"PRIVATE-TOKEN": gl_client.api_key})
     try:
-        let response = client.getContent(fmt"{gl_client.api_endpoint}/projects/{gl_client.project_id}/triggers")
+        let response = gl_client.client.getContent(fmt"{gl_client.api_endpoint}/projects/{gl_client.project_id}/triggers")
         for item in parseJSON(response):
             if len(item["token"].getStr()) > 4:
                 gl_client.trigger_token = item["token"].getStr()
@@ -116,8 +121,6 @@ proc triggerPipeline*(variables: seq[string], gl_client: var GitlabClient,
 
     getTriggerToken(gl_client)
 
-    var client = newHttpClient(sslContext = newContext(
-            verifyMode = CVerifyNone))
     var data = newMultipartData()
     for variable in variables:
         var var_key = variable.split("=")[0]
@@ -128,7 +131,7 @@ proc triggerPipeline*(variables: seq[string], gl_client: var GitlabClient,
     data["ref"] = branch
     data["token"] = gl_client.trigger_token
     try:
-        let response = client.postContent(
+        let response = gl_client.client.postContent(
                 fmt"{gl_client.api_endpoint}/projects/{gl_client.project_id}/trigger/pipeline",
                  multipart = data)
 

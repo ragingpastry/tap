@@ -21,3 +21,7 @@ task test, "Runs the test suite":
 task muslbuild, "Builds the project":
     exec "nimble --accept install argparse@2.0.1"
     exec "nim musl --gcc.exe:musl-gcc --gcc.linkerexe:musl-gcc -d:libressl --passL:\"-static\" -d:release --opt:size src/tap.nim"
+
+task muslbuilddev, "Builds the project for dev":
+    exec "nimble --accept install argparse@2.0.1"
+    exec "nim musl --gcc.exe:musl-gcc --gcc.linkerexe:musl-gcc -d:libressl --passL:\"-static\" src/tap.nim"
