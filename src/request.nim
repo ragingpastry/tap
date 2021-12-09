@@ -2,18 +2,27 @@ import std/[osproc, httpclient, strutils, net, strformat, json, uri]
 
 type
     GitlabClient* = object
+        ## A container for Gitlab things that we pass between functions
+
         api_endpoint*: string
         api_key*: string
         project_id*: int
         trigger_token*: string
 
 proc getRemote*(): string =
+    ## Returns the origin remote of a git repository
+
     var remote = execCmdEx("git remote get-url origin")[0]
     stripLineEnd(remote)
 
     result = remote
 
 proc getApiEndpoint*(remote: string): string =
+    ## Parses a remote string (like origin) and builds
+    ## an API endpoint for Gitlab. Currently this is hardcoded
+    ## to use /api/v4
+    ## In the future we could also make this configurable
+
     let scheme = parseUri(remote).scheme
     let host = parseUri(remote).hostname
     let port = parseUri(remote).port
@@ -22,17 +31,24 @@ proc getApiEndpoint*(remote: string): string =
     result = endpoint
 
 proc getProjectpath*(remote: string): string =
+    ## Parses a remote string (like origin) and returns
+    ## the path of the project.
+    ## For example if your remote is: https://gitlab.com/test/project.git
+    ## then the project path returned would be test/project
 
     let project_path = parseUri(remote).path.split(".git")[0]
     result = project_path[1 .. ^1]
 
 proc getBranch*(): string =
+    ## Returns the current HEAD of the git project in the current working directory
+
     var branch = execCmdEx("git rev-parse --abbrev-ref HEAD")[0]
     stripLineEnd(branch)
     result = branch
 
 proc getProjectID*(project_url: string, gl_client: var GitlabClient) =
-    ### Gets a project ID based on a project URL
+    ## Gets a project ID based on a project URL from the
+    ## Gitlab API
 
     let encoded_url = encodeUrl(project_url)
     var client = newHttpClient(sslContext = newContext(
@@ -51,6 +67,7 @@ proc getProjectID*(project_url: string, gl_client: var GitlabClient) =
         raise
 
 proc setTriggerToken*(gl_client: var GitlabClient) =
+    ## Creates a Pipeline Trigger token in the Gitlab project
     var client = newHttpClient(sslContext = newContext(
             verifyMode = CVerifyNone))
     client.headers = newHttpHeaders({"PRIVATE-TOKEN": gl_client.api_key})
@@ -70,8 +87,9 @@ proc setTriggerToken*(gl_client: var GitlabClient) =
         raise
 
 proc getTriggerToken*(gl_client: var GitlabClient) =
-    ## Gets a trigger token. Must exist
-    ## We might be able to auto create in the future
+    ## Attempts to find an existing Pipeline trigger token.
+    ## If none exist then we create one.
+
     var client = newHttpClient(sslContext = newContext(
             verifyMode = CVerifyNone))
     client.headers = newHttpHeaders({"PRIVATE-TOKEN": gl_client.api_key})
@@ -92,6 +110,9 @@ proc getTriggerToken*(gl_client: var GitlabClient) =
 
 proc triggerPipeline*(variables: seq[string], gl_client: var GitlabClient,
         branch: string): string =
+    ## Triggers the pipeline based on the information in GitlabClient
+    ## Accepts a list of variables to pass to the pipeline. If no variables
+    ## are defined then we do not pass any
 
     getTriggerToken(gl_client)
 
